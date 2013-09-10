@@ -51,6 +51,4 @@ class EndpointShutdownTest extends Specification {
             deproxy.shutdown()
         }
     }
-
-
 }
