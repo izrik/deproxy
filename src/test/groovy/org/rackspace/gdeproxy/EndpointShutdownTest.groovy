@@ -5,30 +5,52 @@
 
 package org.rackspace.gdeproxy
 
-/**
- *
- * @author richard-sartor
- */
-class EndpointShutdownTest {
+import spock.lang.Specification
+
+class EndpointShutdownTest extends Specification {
+
+    Deproxy deproxy
+    DeproxyEndpoint e1
+    DeproxyEndpoint e2
+    int port1
+    int port2
+
+    void testEndpointShutdown() {
+
+        given:
+
+        def pf = new PortFinder()
+        port1 = pf.getNextOpenPort()
+        port2 = pf.getNextOpenPort()
+
+        deproxy = new Deproxy()
+        e1 = deproxy.addEndpoint(port1)
+        e2 = deproxy.addEndpoint(port2)
+
+
+        when: "try to start another endpoint on the same port"
+        def e3 = deproxy.addEndpoint(port1)
+
+        then: "should throw an exception"
+        thrown(IOException)
+
+
+        when: "try to start another endpoint on the same port, after shutting down the first one"
+        e1.shutdown()
+        def e4 = deproxy.addEndpoint(port1)
+
+        then: "should work fine"
+        notThrown(IOException)
+
+        cleanup:
+        deproxy.shutdown()
+    }
+
+    void cleanup() {
+        if (deproxy) {
+            deproxy.shutdown()
+        }
+    }
+
 
 }
-
-
-//class TestEndpointShutdown(unittest.TestCase):
-//    def setUp(self):
-//        self.deproxy_port1 = get_next_deproxy_port()
-//        self.deproxy_port2 = get_next_deproxy_port()
-//        self.deproxy = deproxy.Deproxy()
-//
-//    def test_shutdown(self):
-//        e1 = self.deproxy.add_endpoint(self.deproxy_port1)
-//        e2 = self.deproxy.add_endpoint(self.deproxy_port2)
-//
-//        e1.shutdown()
-//
-//        try:
-//            e3 = self.deproxy.add_endpoint(self.deproxy_port1)
-//        except socket.error as e:
-//            self.fail('Address already in use: %s' % e)
-//
-//
