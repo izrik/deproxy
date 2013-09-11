@@ -25,6 +25,11 @@ class DeproxyEndpoint {
     protected ServerSocket serverSocket;
     protected SystemClock clock = new SystemClock();
 
+    protected Object handlerThreadLock = new Object()
+    protected Set<DeproxyEndpointHandlerThread> activeHandlerThreads = new HashSet<DeproxyEndpointHandlerThread>()
+    protected Set<DeproxyEndpointHandlerThread> finishedHandlerThreads = new HashSet<DeproxyEndpointHandlerThread>()
+    protected boolean shuttingDown
+
     public DeproxyEndpoint(Deproxy deproxy, int port, String name,
                            String hostname="localhost", Object defaultHandler=null) {
         //        """
@@ -49,7 +54,6 @@ class DeproxyEndpoint {
         this.port = port
         this.hostname = hostname
         this.defaultHandler = defaultHandler
-        this.serverThread = new Thread("Thread-${name}")
 
         this.serverSocket = new ServerSocket(port)
 
@@ -77,7 +81,9 @@ class DeproxyEndpoint {
         @Override
         public void run() {
 
-            while (!this.socket.isClosed()) {
+            while (!this.socket.isClosed() &&
+                   !parent.shuttingDown) {
+
                 try {
                     this.socket.setSoTimeout(1000);
 
@@ -92,6 +98,10 @@ class DeproxyEndpoint {
                         }
                     }
 
+                    if (parent.shuttingDown) {
+                        break;
+                    }
+
                     log.debug("Accepted a new connection");
                     //socket.setSoTimeout(1000);
                     log.debug("Creating the handler thread");
@@ -99,6 +109,10 @@ class DeproxyEndpoint {
                     String connectionName = UUID.randomUUID().toString()
 
                     DeproxyEndpointHandlerThread handlerThread = new DeproxyEndpointHandlerThread(this.parent, socket, connectionName, this.getName() + "-connection-" + connectionName.toString());
+
+                    synchronized (handlerThreadLock) {
+                        activeHandlerThreads.add(handlerThread)
+                    }
 
                     log.debug("Starting the handler thread");
                     handlerThread.start();
@@ -108,6 +122,11 @@ class DeproxyEndpoint {
                     // do nothing
                 } catch (IOException ex) {
                     log.error(null, ex);
+                }
+
+                synchronized (handlerThreadLock) {
+                    activeHandlerThreads.removeAll(finishedHandlerThreads)
+                    finishedHandlerThreads.clear()
                 }
             }
         }
@@ -140,6 +159,10 @@ class DeproxyEndpoint {
             this.parent.processNewConnection(this.socket, connectionName);
 
             log.debug("Connection processed");
+
+            synchronized (parent.handlerThreadLock) {
+                parent.finishedHandlerThreads.add(this)
+            }
         }
     }
 
@@ -173,6 +196,8 @@ class DeproxyEndpoint {
 
                     close = handleOneRequest(inStream, outStream, connectionName)
                     log.debug "handled one request"
+
+                    if (shuttingDown) break;
                 }
 
                 log.debug "ending loop"
@@ -196,18 +221,60 @@ class DeproxyEndpoint {
 
     }
 
-    def shutdown() {
-        log.debug "shutting down"
+    def shutdown(long timeoutMillis=30000, boolean terminateThreadsAfterTimeout=false) {
+
+        long startTimeMillis = System.currentTimeMillis()
 
         log.debug("Shutting down ${this.name}")
-        if (serverThread) {
-            serverThread.interrupt()
-        }
-        if (serverSocket)
+
+        shuttingDown = true
+
+        if (serverSocket) {
             serverSocket.close()
+        }
+
+        if (serverThread) {
+            waitForThreadToEnd(serverThread, startTimeMillis, timeoutMillis, terminateThreadsAfterTimeout)
+        }
+
+        // wait for all client requests to complete
+        def remainingHandlerThreads = new HashSet<DeproxyEndpointHandlerThread>()
+        synchronized (handlerThreadLock) {
+            remainingHandlerThreads.addAll(activeHandlerThreads)
+        }
+        for (th in remainingHandlerThreads) {
+            waitForThreadToEnd(th, startTimeMillis, timeoutMillis, terminateThreadsAfterTimeout)
+        }
+
         log.debug("Finished shutting down ${this.name}")
     }
 
+    protected void waitForThreadToEnd(
+            Thread thread,
+            long startTimeMillis,
+            long timeoutMillis=30000,
+            boolean terminateAfterTimeout=false) {
+
+        long currentTimeDelta = System.currentTimeMillis() - startTimeMillis
+
+        long joinTimeoutMillis = 0
+        if (timeoutMillis > 0) {
+            joinTimeoutMillis = Math.max(timeoutMillis - currentTimeDelta, 1L)
+        }
+
+        thread.join(joinTimeoutMillis)
+
+        if (thread.isAlive()) {
+
+            thread.interrupt()
+        }
+
+        if (thread.isAlive() && terminateAfterTimeout) {
+            // stop() is deprecated
+            log.info("Terminating thread ${thread.getName()} after timeout")
+            thread.stop()
+        }
+    }
 
     boolean isListening() {
         return serverSocket != null && !serverSocket.isClosed()
