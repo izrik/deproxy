@@ -24,24 +24,40 @@ class DeproxyShutdownTest2 extends Specification {
         // start making a request to the endpoint in another thread, so we can
         // try to shutdown while the request is in progress.
         MessageChain mc
+        CountDownLatch clientStarted = new CountDownLatch(1)
         CountDownLatch clientFinished = new CountDownLatch(1)
+        Exception caughtException = null
+
         Thread th = Thread.startDaemon {
-            mc = deproxy.makeRequest(url: "http://localhost:${port}",
-                    defaultHandler: Handlers.Delay(2000))
+
+            clientStarted.countDown()
+
+            try {
+                mc = deproxy.makeRequest(url: "http://localhost:${port}",
+                        defaultHandler: Handlers.Delay(2000))
+            } catch (Exception ex) {
+                caughtException = ex
+            }
+
             clientFinished.countDown()
         }
 
 
 
         when: "shutting down the deproxy"
+
         // give the client request time to start
-        sleep 500
+        clientStarted.await(500, TimeUnit.MILLISECONDS)
+
         deproxy.shutdown()
+
         // the client request should have completed by now, but we still need
         // to wait for makeRequest to return and the mc variable to be set.
+
         clientFinished.await(500, TimeUnit.MILLISECONDS)
 
         then: "client request should have completed"
+        caughtException == null
         mc != null
         mc.handlings.size() == 1
         mc.handlings[0].endpoint == e
