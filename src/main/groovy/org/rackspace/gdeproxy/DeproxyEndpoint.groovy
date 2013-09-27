@@ -5,8 +5,8 @@ import org.apache.log4j.Logger
 import org.linkedin.util.clock.SystemClock
 
 import java.text.SimpleDateFormat
-
-import static org.linkedin.groovy.util.concurrent.GroovyConcurrentUtils.waitForCondition
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 
 /**
  * A class that acts as a mock HTTP server.
@@ -21,7 +21,7 @@ class DeproxyEndpoint {
     def defaultHandler;
 
     protected Deproxy deproxy;
-    protected Thread serverThread;
+    protected DeproxyEndpointListenerThread serverThread;
     protected ServerSocket serverSocket;
     protected SystemClock clock = new SystemClock();
 
@@ -59,10 +59,7 @@ class DeproxyEndpoint {
 
         this.serverThread = new DeproxyEndpointListenerThread(this, this.serverSocket, "Thread-${name}");
         this.serverThread.start();
-
-        waitForCondition(this.clock, '5s', '1s', {
-            isListening()
-        })
+        this.serverThread.threadIsReady.await(250, TimeUnit.MILLISECONDS)
     }
 
     public class DeproxyEndpointListenerThread extends Thread {
@@ -70,6 +67,7 @@ class DeproxyEndpoint {
         DeproxyEndpoint parent;
         ServerSocket socket;
         Logger log = Logger.getLogger(DeproxyEndpointListenerThread.class.getName());
+        CountDownLatch threadIsReady = new CountDownLatch(1)
 
         public DeproxyEndpointListenerThread(DeproxyEndpoint parent, ServerSocket socket, String name) {
 
@@ -81,16 +79,27 @@ class DeproxyEndpoint {
         @Override
         public void run() {
 
+            boolean started = false
+
             while (!this.socket.isClosed() &&
                    !parent.shuttingDown) {
 
                 try {
+
                     this.socket.setSoTimeout(1000);
 
                     Socket socket;
                     try {
+
+                        if (!started) {
+                            threadIsReady.countDown()
+                            started = true
+                        }
+
                         socket = this.socket.accept();
+
                     } catch (SocketException e) {
+
                         if (this.socket.isClosed()) {
                             break;
                         } else {
@@ -103,7 +112,7 @@ class DeproxyEndpoint {
                     }
 
                     log.debug("Accepted a new connection");
-                    //socket.setSoTimeout(1000);
+
                     log.debug("Creating the handler thread");
 
                     String connectionName = UUID.randomUUID().toString()
