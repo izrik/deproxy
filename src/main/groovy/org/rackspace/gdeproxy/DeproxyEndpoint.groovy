@@ -2,7 +2,6 @@ package org.rackspace.gdeproxy
 
 import groovy.util.logging.Log4j
 import org.apache.log4j.Logger
-import org.linkedin.util.clock.SystemClock
 
 import java.text.SimpleDateFormat
 import java.util.concurrent.CountDownLatch
@@ -23,7 +22,6 @@ class DeproxyEndpoint {
     protected Deproxy deproxy;
     protected DeproxyEndpointListenerThread serverThread;
     protected ServerSocket serverSocket;
-    protected SystemClock clock = new SystemClock();
 
     protected Object handlerThreadLock = new Object()
     protected Set<DeproxyEndpointHandlerThread> activeHandlerThreads = new HashSet<DeproxyEndpointHandlerThread>()
