@@ -15,7 +15,7 @@ class FilterByMethodHandler {
                                  Closure<Response> CONNECTHandler=null,
                                  Closure<Response> PATCHHandler=null,
                                  Map<String, Closure<Response>> extraHandlersByMethod=null,
-                                 Closure<Response> nextHandler=null) {
+                                 Closure<Response> fallbackHandler=null) {
 
         this.GETHandler = GETHandler
         this.HEADHandler = HEADHandler
@@ -32,7 +32,7 @@ class FilterByMethodHandler {
             this.extraHandlersByMethod[key] = extraHandlersByMethod[key]
         }
 
-        this.nextHandler = nextHandler
+        this.fallbackHandler = fallbackHandler
     }
 
     Closure<Response> GETHandler;
@@ -46,7 +46,7 @@ class FilterByMethodHandler {
     Closure<Response> PATCHHandler;
 
     Map<String, Closure<Response>> extraHandlersByMethod
-    Closure<Response> nextHandler
+    Closure<Response> fallbackHandler
 
     public Response handleRequest(Request request) {
 
@@ -90,8 +90,8 @@ class FilterByMethodHandler {
             return extraHandlersByMethod[request.method](request)
         }
 
-        if (nextHandler != null) {
-            return nextHandler(request)
+        if (fallbackHandler != null) {
+            return fallbackHandler(request)
         }
 
         return new Response(405);

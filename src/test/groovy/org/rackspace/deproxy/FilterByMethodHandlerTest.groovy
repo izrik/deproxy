@@ -110,12 +110,12 @@ class FilterByMethodHandlerTest extends Specification {
         response.code == 404
     }
 
-    def "If nothing matches, then the nextHandler is used."() {
+    def "If nothing matches, then the fallbackHandler is used."() {
 
         given:
         def customHandler = { request -> return new Response(606) }
         FilterByMethodHandler handler = new FilterByMethodHandler(
-                nextHandler: customHandler
+                fallbackHandler: customHandler
         )
 
         when:
