@@ -28,8 +28,10 @@ class FilterByMethodHandler {
         this.PATCHHandler = PATCHHandler
 
         this.extraHandlersByMethod = [:]
-        for (key in extraHandlersByMethod.keySet()) {
-            this.extraHandlersByMethod[key] = extraHandlersByMethod[key]
+        if (extraHandlersByMethod != null) {
+            for (key in extraHandlersByMethod.keySet()) {
+                this.extraHandlersByMethod[key] = extraHandlersByMethod[key]
+            }
         }
 
         this.fallbackHandler = fallbackHandler
