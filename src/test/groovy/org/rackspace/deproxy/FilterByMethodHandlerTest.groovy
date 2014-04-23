@@ -17,7 +17,7 @@ class FilterByMethodHandlerTest extends Specification {
 
         then:
         handled == true
-        response.code == 200
+        response.code == "200"
     }
 
     def "Single named handler should not be triggered on a different method"() {
@@ -33,7 +33,7 @@ class FilterByMethodHandlerTest extends Specification {
 
         then:
         handled == false
-        response.code == 405
+        response.code == "405"
     }
 
     def "Multiple named handlers - only one should be triggered"() {
@@ -52,7 +52,7 @@ class FilterByMethodHandlerTest extends Specification {
         then:
         gotGet == false
         gotPost == true
-        response.code == 405
+        response.code == "201"
     }
 
     def "Define handlers for non-standard method names"() {
@@ -70,7 +70,7 @@ class FilterByMethodHandlerTest extends Specification {
 
         then:
         handled == true
-        response.code == 200
+        response.code == "200"
     }
 
     def "Handlers for non-standard methods are not triggered by standard methods"() {
@@ -88,7 +88,7 @@ class FilterByMethodHandlerTest extends Specification {
 
         then:
         handled == false
-        response.code == 405
+        response.code == "405"
     }
 
     def "Standard method names in extraHandlersByMethod are ignored if the named handler is available"() {
@@ -107,7 +107,7 @@ class FilterByMethodHandlerTest extends Specification {
 
         then:
         handled == false
-        response.code == 404
+        response.code == "404"
     }
 
     def "If nothing matches, then the fallbackHandler is used."() {
@@ -122,6 +122,6 @@ class FilterByMethodHandlerTest extends Specification {
         def response = handler.handleRequest(new Request('GET', '/'))
 
         then:
-        response.code == 606
+        response.code == "606"
     }
 }
