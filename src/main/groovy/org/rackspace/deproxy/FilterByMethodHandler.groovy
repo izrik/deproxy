@@ -2,9 +2,6 @@ package org.rackspace.deproxy
 
 class FilterByMethodHandler {
 
-    public FilterByMethodHandler(Map params) {
-        this()
-    }
     public FilterByMethodHandler(Closure<Response> GETHandler=null,
                                  Closure<Response> HEADHandler=null,
                                  Closure<Response> POSTHandler=null,
@@ -35,6 +32,19 @@ class FilterByMethodHandler {
         }
 
         this.fallbackHandler = fallbackHandler
+    }
+    public FilterByMethodHandler(Map params) {
+        this((params?.GETHandler as Closure<Response>),
+                (params?.HEADHandler as Closure<Response>),
+                (params?.POSTHandler as Closure<Response>),
+                (params?.PUTHandler as Closure<Response>),
+                (params?.DELETEHandler as Closure<Response>),
+                (params?.TRACEHandler as Closure<Response>),
+                (params?.OPTIONSHandler as Closure<Response>),
+                (params?.CONNECTHandler as Closure<Response>),
+                (params?.PATCHHandler as Closure<Response>),
+                (params?.extraHandlersByMethod as Map<String, Closure<Response>>),
+                (params?.fallbackHandler as Closure<Response>));
     }
 
     Closure<Response> GETHandler;
