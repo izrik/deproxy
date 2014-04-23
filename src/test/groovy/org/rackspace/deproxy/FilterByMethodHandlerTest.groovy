@@ -58,7 +58,7 @@ class FilterByMethodHandlerTest extends Specification {
     def "Define handlers for non-standard method names"() {
 
         given:
-        boolean handled = true
+        boolean handled = false
         FilterByMethodHandler handler = new FilterByMethodHandler(
                 extraHandlersByMethod: [
                     'QWERTY': { request -> handled = true; return new Response(200) }
@@ -76,7 +76,7 @@ class FilterByMethodHandlerTest extends Specification {
     def "Handlers for non-standard methods are not triggered by standard methods"() {
 
         given:
-        boolean handled = true
+        boolean handled = false
         FilterByMethodHandler handler = new FilterByMethodHandler(
                 extraHandlersByMethod: [
                         'QWERTY': { request -> handled = true; return new Response(200) }
@@ -94,7 +94,7 @@ class FilterByMethodHandlerTest extends Specification {
     def "Standard method names in extraHandlersByMethod are ignored if the named handler is available"() {
 
         given:
-        boolean handled = true
+        boolean handled = false
         FilterByMethodHandler handler = new FilterByMethodHandler(
                 GETHandler: { request -> return new Response(404) },
                 extraHandlersByMethod: [
