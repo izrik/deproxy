@@ -6,7 +6,7 @@ import java.util.regex.Pattern
 
 class FilterByPathHandler {
 
-    FilterByPathHandler(handlers=null, Closure<Response> fallbackHandler=null) {
+    FilterByPathHandler(handlers=null, Closure<Response> fallbackHandler=null, exactMatch=true) {
         if (handlers != null) {
             if (handlers instanceof Map<?, Closure<Response>>) {
                 for (entry in handlers.entrySet()) {
@@ -31,17 +31,19 @@ class FilterByPathHandler {
         }
 
         this.fallbackHandler = fallbackHandler
+        this.exactMatch = exactMatch
     }
 
     static FilterByPathHandler ByName(Map params) {
         def handlers = params?.handlers
         Closure<Response> fallbackHandler = params?.fallbackHandler as Closure<Response>
+        boolean exactMatch = (params?.exactMatch == true)
 
-        return new FilterByPathHandler(handlers, fallbackHandler)
+        return new FilterByPathHandler(handlers, fallbackHandler, exactMatch)
     }
-    static FilterByPathHandler ByName(Closure<Response> fallbackHandler, handlers) {
+    static FilterByPathHandler ByName(Closure<Response> fallbackHandler, handlers, boolean exactMatch) {
         // this overload is solely for the purpose of providing parameter names in auto-complete
-        return ByName(handlers: handlers, fallbackHandler: fallbackHandler)
+        return ByName(handlers: handlers, fallbackHandler: fallbackHandler, exactMatch: exactMatch)
     }
 
     class Entry {
@@ -51,11 +53,19 @@ class FilterByPathHandler {
 
     List<Entry> handlers = [] as List<Entry>
     Closure<Response> fallbackHandler
+    boolean exactMatch
 
     Response handleRequest(Request request) {
 
         for (entry in handlers) {
-            if (request.path ==~ entry.pattern) {
+            boolean trigger
+            if (exactMatch) {
+                trigger = (request.path ==~ entry.pattern)
+            } else {
+                trigger = entry.pattern.matcher(request.path).find()
+            }
+
+            if (trigger) {
                 return entry.handler(request)
             }
         }

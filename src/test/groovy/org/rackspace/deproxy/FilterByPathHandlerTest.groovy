@@ -191,4 +191,82 @@ class FilterByPathHandlerTest extends Specification {
         response.code == "606"
     }
 
+    def "If exactMatch is false, then a handler should be triggered when its string/pattern matches any part of the incoming request path"() {
+
+        given:
+        boolean handled = false
+        FilterByPathHandler handler = FilterByPathHandler.ByName(
+                handlers: [ '/path/to/resource' : { request -> handled = true; return new Response(200) } ],
+                exactMatch: false
+        )
+
+        when:
+        def response = handler.handleRequest(new Request('GET', '/path/to/resource/stuff'))
+
+        then:
+        handled == true
+        response.code == "200"
+
+        when:
+        handled = false
+        response = handler.handleRequest(new Request('GET', '/some/path/to/resource'))
+
+        then:
+        handled == true
+        response.code == "200"
+
+        when:
+        handled = false
+        response = handler.handleRequest(new Request('GET', '/some/path/to/resource/stuff'))
+
+        then:
+        handled == true
+        response.code == "200"
+
+        when:
+        handled = false
+        response = handler.handleRequest(new Request('GET', '/path/to'))
+
+        then:
+        handled == false
+        response.code == "404"
+    }
+
+    def "If exactMatch is false, then a handler should not be triggered when its string/pattern is larger than the incoming request path"() {
+
+        given:
+        boolean handled = false
+        FilterByPathHandler handler = FilterByPathHandler.ByName(
+                handlers: [ '/path/to/resource' : { request -> handled = true; return new Response(200) } ],
+                exactMatch: false
+        )
+
+        when:
+        def response = handler.handleRequest(new Request('GET', '/path/to'))
+
+        then:
+        handled == false
+        response.code == "404"
+    }
+
+    def "Multiple handlers can be chained"() {
+
+        given:
+        boolean handled = false
+        FilterByPathHandler childHandler = new FilterByPathHandler([
+                '/path/to/resource' : { request -> handled = true; return new Response(200) }
+        ])
+        FilterByPathHandler handler = FilterByPathHandler.ByName(
+                handlers: [ (~/^\/path\b/): childHandler.&handleRequest ],
+                exactMatch: false
+        )
+
+        when:
+        def response = handler.handleRequest(new Request('GET', '/path/to/resource'))
+
+        then:
+        handled == true
+        response.code == "200"
+    }
+
 }
