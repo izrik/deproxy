@@ -229,6 +229,50 @@ additional handlers.
 
 .. _Route(scheme, host, deproxy): Route_
 
+Advanced Built-in Handler Classes
+=================================
+
+The following handlers are built into deproxy. They can be used to address a
+number of common use cases. They also demonstrate effective ways to define
+additional handlers.
+
+- `FilterByPathHandler`_
+    The last-resort handler used if none is specified. It returns a response
+    with a 200 status code, an empty response body, and only the basic Date,
+    Server, and request id headers. ::
+
+        handler = new FilterByPathHandler([
+                '/path/to/resource': Handlers.&simpleHandler
+        ])
+        mc = deproxy.makeRequest(
+                url: 'http://localhost:9994/path/to/resource',
+                defaultHandler: handler.&handleRequest)
+        println mc.receivedResponse.headers
+        // [
+        //  Server: deproxy 0.16-SNAPSHOT,
+        //  Date: Wed, 04 Sep 2013 16:45:44 GMT,
+        //  Content-Length: 0,
+        //  Deproxy-Request-ID: 398bbcf7-d342-4457-8e8e-0b7e8f8ca826
+        // ]
+
+- `FilterByMethodHandler`_
+    Returns a response with a 200 status code, and copies the request body and
+    request headers.::
+
+        mc = deproxy.makeRequest(url: 'http://localhost:9994/',
+                defaultHandler: Handlers.&echoHandler)
+        println mc.receivedResponse.headers
+        // [
+        //  Deproxy-Request-ID: 5f488584-fbe2-4322-bab2-8e9c157e84be,
+        //  Host: localhost,
+        //  Accept: */*,
+        //  Accept-Encoding: identity,
+        //  User-Agent: deproxy 0.16-SNAPSHOT,
+        //  Server: deproxy 0.16-SNAPSHOT,
+        //  Date: Wed, 04 Sep 2013 16:45:44 GMT,
+        //  Content-Length: 0
+        // ]
+
 Custom Handlers
 ===============
 
